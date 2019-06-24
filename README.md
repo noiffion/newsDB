@@ -74,6 +74,7 @@ ORDER BY day;
 
 
  The database can be downloaded [from here](https://d17h27t6h515a5.cloudfront.net/topher/2016/August/57b5f748_newsdata/newsdata.zip)
+ 
  And attached here as newsdata.sql.gz.
  
  Because the database and the program runs only on Linux the installation of 'VirtualBox' and 
