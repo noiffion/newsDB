@@ -74,8 +74,7 @@ ORDER BY day;
 
 
  The database can be downloaded [from here](https://d17h27t6h515a5.cloudfront.net/topher/2016/August/57b5f748_newsdata/newsdata.zip)
- 
- And attached here as newsdata.sql.gz.
+ and attached here as newsdata.sql.gz.
  
  Because the database and the program runs only on Linux the installation of 'VirtualBox' and 
  'Vagrant' is also needed apart from Postgresql and the third version of Python:
@@ -96,8 +95,7 @@ ORDER BY day;
  ```
  command will create the database from the downloaded 'newsdata.sql' file. 
  (If not then we have to create a database named 'news' for the user in psql with the 
-  CREATE DATABASE news WITH OWNER vagrant; 
-  - and then run the command above).
+  CREATE DATABASE news WITH OWNER vagrant; and then run the command above).
 
  And with the 'vagrant up' and 'vagrant ssh' commands one can connect to the virtual machine
  where the program can be run. 
