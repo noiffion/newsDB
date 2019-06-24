@@ -1,0 +1,9 @@
+-- 1. What are the most popular three articles of all time?
+
+SELECT articles.id, articles.title, hit_per_page.pageview, hit_per_page.slug
+FROM articles JOIN hit_per_page ON
+articles.slug = hit_per_page.slug
+WHERE hit_per_page.slug!='Not article'
+ORDER BY hit_per_page.pageview DESC
+LIMIT 3;
+

@@ -1,0 +1,5 @@
+CREATE OR REPLACE VIEW authors_articles AS
+SELECT articles.title, articles.slug, authors.name, authors.id as author_id FROM
+authors JOIN articles ON
+authors.id = articles.author;
+

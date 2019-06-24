@@ -1,0 +1,8 @@
+-- 2. Who are the most popular article authors of all time?
+
+SELECT authors_articles.name as author, SUM(hit_per_page.pageview) as total_pageview
+FROM authors_articles JOIN hit_per_page ON
+authors_articles.slug = hit_per_page.slug
+GROUP BY author
+ORDER BY total_pageview DESC;
+

@@ -1,0 +1,300 @@
+
+            I. Most popular article
+           °°°°°°°°°°°°°°°°°°°°°°°°°
+
+"1. What are the most popular three articles of all time?"
+
+To see the abbreviated titles in the 'articles' table 'slug' column:
+```
+SELECT slug FROM articles;
+```
+
+output:
+
+           slug
+---------------------------
+ bad-things-gone
+ balloon-goons-doomed
+ bears-love-berries
+ candidate-is-jerk
+ goats-eat-googles
+ media-obsessed-with-bears
+ trouble-for-troubled
+ so-many-bears
+(8 rows)
+
+
+
+Given there seems to be many versions of the same article (with their path ending in different 
+letters of the alphabet) I decided to group them together by creating the following view:
+```
+CREATE OR REPLACE VIEW hit_per_page AS
+SELECT COUNT(id) AS pageview,
+CASE
+WHEN path LIKE '/article/bad-things-gon%' THEN 'bad-things-gone'
+WHEN path LIKE '/article/balloon-goons-doome%' THEN 'balloon-goons-doomed'
+WHEN path LIKE '/article/bears-love-berrie%' THEN 'bears-love-berries'
+WHEN path LIKE '/article/candidate-is-jer%' THEN 'candidate-is-jerk'
+WHEN path LIKE '/article/goats-eat-google%' THEN 'goats-eat-googles'
+WHEN path LIKE '/article/media-obsessed-with-bear%' THEN 'media-obsessed-with-bears'
+WHEN path LIKE '/article/trouble-for-trouble%' THEN 'trouble-for-troubled'
+WHEN path LIKE '/article/so-many-bear%' THEN 'so-many-bears'
+ELSE 'Not article'
+END AS slug
+FROM log
+GROUP BY slug
+ORDER BY pageview DESC
+;
+```
+
+output:
+
+ pageview |           slug 
+----------+---------------------------
+   480000 | Not article
+   342102 | candidate-is-jerk
+   256365 | bears-love-berries
+   171762 | bad-things-gone
+    85775 | goats-eat-googles
+    85679 | trouble-for-troubled
+    85392 | so-many-bears
+    85387 | balloon-goons-doomed
+    85273 | media-obsessed-with-bears
+(9 rows)
+
+
+From the view above one can run now the query to answer the question:
+```
+SELECT articles.id, articles.title, hit_per_page.pageview, hit_per_page.slug
+FROM articles JOIN hit_per_page ON 
+articles.slug = hit_per_page.slug
+WHERE hit_per_page.slug!='Not article'
+ORDER BY hit_per_page.pageview DESC
+LIMIT 3
+;
+```
+
+output:
+
+ id |              title               | pageview |        slug        
+----+----------------------------------+----------+--------------------
+ 26 | Candidate is jerk, alleges rival |   342102 | candidate-is-jerk
+ 25 | Bears love berries, alleges bear |   256365 | bears-love-berries
+ 23 | Bad things gone, say good people |   171762 | bad-things-gone
+(3 rows)
+
+
+
+             II. Most popular author
+            °°°°°°°°°°°°°°°°°°°°°°°°°
+
+"2. Who are the most popular article authors of all time?"
+
+To connect the authors names and ids with the articles their wrote I created the following
+view:
+```
+CREATE OR REPLACE VIEW authors_articles AS
+SELECT articles.title, articles.slug, authors.name, authors.id as author_id FROM
+authors JOIN articles ON
+authors.id = articles.author
+;
+```
+
+output:
+
+------------------------------------+---------------------------+------------------------+-----------
+ Bad things gone, say good people   | bad-things-gone           | Anonymous Contributor  |         3
+ Balloon goons doomed               | balloon-goons-doomed      | Markoff Chaney         |         4
+ Bears love berries, alleges bear   | bears-love-berries        | Ursula La Multa        |         1
+ Candidate is jerk, alleges rival   | candidate-is-jerk         | Rudolf von Treppenwitz |         2
+ Goats eat Google's lawn            | goats-eat-googles         | Ursula La Multa        |         1
+ Media obsessed with bears          | media-obsessed-with-bears | Ursula La Multa        |         1
+ Trouble for troubled troublemakers | trouble-for-troubled      | Rudolf von Treppenwitz |         2
+ There are a lot of bears           | so-many-bears             | Ursula La Multa        |         1
+(8 rows)
+
+
+This query displays the pageview an article received and the authors who wrote that:
+```
+SELECT authors_articles.title as title, authors_articles.name as author, hit_per_page.pageview as pageview
+FROM authors_articles JOIN hit_per_page ON
+authors_articles.slug = hit_per_page.slug
+;
+```
+
+output:
+
+               title                |         author         | pageview 
+------------------------------------+------------------------+----------
+ Candidate is jerk, alleges rival   | Rudolf von Treppenwitz |   342102
+ Bears love berries, alleges bear   | Ursula La Multa        |   256365
+ Bad things gone, say good people   | Anonymous Contributor  |   171762
+ Goats eat Google's lawn            | Ursula La Multa        |    85775
+ Trouble for troubled troublemakers | Rudolf von Treppenwitz |    85679
+ There are a lot of bears           | Ursula La Multa        |    85392
+ Balloon goons doomed               | Markoff Chaney         |    85387
+ Media obsessed with bears          | Ursula La Multa        |    85273
+(8 rows)
+
+
+
+Finally this query will give us the answer to the second question:
+```
+SELECT authors_articles.name as author, SUM(hit_per_page.pageview) as total_pageview
+FROM authors_articles JOIN hit_per_page ON
+authors_articles.slug = hit_per_page.slug
+GROUP BY author
+ORDER BY total_pageview DESC 
+;
+```
+
+   author               | total_pageview 
+------------------------+----------------
+ Ursula La Multa        |         512805
+ Rudolf von Treppenwitz |         427781
+ Anonymous Contributor  |         171762
+ Markoff Chaney         |          85387
+(4 rows)
+
+Ursula La Multa seems to be the winner as she wrote the most articles.
+
+
+
+            III.  On which days did more than 1% of requests lead to errors?
+           °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+
+"3. On which days did more than 1% of requests lead to errors?"
+
+First let's see what was the proportion of errors and requests without problams during
+the time period. 
+```
+SELECT COUNT(id) AS numb, status FROM log
+GROUP BY status;
+```
+
+output:
+
+  numb   |    status     
+---------+---------------
+ 1664827 | 200 OK
+   12908 | 404 NOT FOUND
+(2 rows)
+
+
+
+Then I created two views to see the number of ok and bad request per day:
+```
+CREATE OR REPLACE VIEW ok_200 AS
+SELECT COUNT(id) AS sum, status, date_trunc('day', time) AS day
+FROM log
+WHERE status LIKE '%200%'
+GROUP BY day, status
+ORDER BY day
+;
+```
+
+output:
+
+  sum  | status |          day           
+-------+--------+------------------------
+ 33963 | 200 OK | 2016-07-01 00:00:00+02
+ 54642 | 200 OK | 2016-07-02 00:00:00+02
+ 54399 | 200 OK | 2016-07-03 00:00:00+02
+ 54774 | 200 OK | 2016-07-04 00:00:00+02
+ 54116 | 200 OK | 2016-07-05 00:00:00+02
+ 54446 | 200 OK | 2016-07-06 00:00:00+02
+ 54161 | 200 OK | 2016-07-07 00:00:00+02
+ 54769 | 200 OK | 2016-07-08 00:00:00+02
+ 54683 | 200 OK | 2016-07-09 00:00:00+02
+ 54258 | 200 OK | 2016-07-10 00:00:00+02
+ 54072 | 200 OK | 2016-07-11 00:00:00+02
+ 54318 | 200 OK | 2016-07-12 00:00:00+02
+ 55045 | 200 OK | 2016-07-13 00:00:00+02
+ 54683 | 200 OK | 2016-07-14 00:00:00+02
+ 54578 | 200 OK | 2016-07-15 00:00:00+02
+ 54030 | 200 OK | 2016-07-16 00:00:00+02
+ 54861 | 200 OK | 2016-07-17 00:00:00+02
+ 54999 | 200 OK | 2016-07-18 00:00:00+02
+ 55036 | 200 OK | 2016-07-19 00:00:00+02
+ 54239 | 200 OK | 2016-07-20 00:00:00+02
+ 54638 | 200 OK | 2016-07-21 00:00:00+02
+ 54809 | 200 OK | 2016-07-22 00:00:00+02
+ 54613 | 200 OK | 2016-07-23 00:00:00+02
+ 54653 | 200 OK | 2016-07-24 00:00:00+02
+ 54268 | 200 OK | 2016-07-25 00:00:00+02
+ 53947 | 200 OK | 2016-07-26 00:00:00+02
+ 54246 | 200 OK | 2016-07-27 00:00:00+02
+ 54258 | 200 OK | 2016-07-28 00:00:00+02
+ 54615 | 200 OK | 2016-07-29 00:00:00+02
+ 54717 | 200 OK | 2016-07-30 00:00:00+02
+ 49991 | 200 OK | 2016-07-31 00:00:00+02
+(31 rows)
+
+
+```
+CREATE OR REPLACE VIEW error_404 AS
+SELECT COUNT(id) AS sum, status, date_trunc('day', time) AS day
+FROM log
+WHERE status LIKE '%404%'
+GROUP BY day, status
+ORDER BY day
+;
+```
+
+output:
+
+sum  |    status     |          day           
+------+---------------+------------------------
+  246 | 404 NOT FOUND | 2016-07-01 00:00:00+02
+  386 | 404 NOT FOUND | 2016-07-02 00:00:00+02
+  403 | 404 NOT FOUND | 2016-07-03 00:00:00+02
+  368 | 404 NOT FOUND | 2016-07-04 00:00:00+02
+  434 | 404 NOT FOUND | 2016-07-05 00:00:00+02
+  410 | 404 NOT FOUND | 2016-07-06 00:00:00+02
+  372 | 404 NOT FOUND | 2016-07-07 00:00:00+02
+  412 | 404 NOT FOUND | 2016-07-08 00:00:00+02
+  408 | 404 NOT FOUND | 2016-07-09 00:00:00+02
+  371 | 404 NOT FOUND | 2016-07-10 00:00:00+02
+  406 | 404 NOT FOUND | 2016-07-11 00:00:00+02
+  382 | 404 NOT FOUND | 2016-07-12 00:00:00+02
+  383 | 404 NOT FOUND | 2016-07-13 00:00:00+02
+  368 | 404 NOT FOUND | 2016-07-14 00:00:00+02
+  404 | 404 NOT FOUND | 2016-07-15 00:00:00+02
+  383 | 404 NOT FOUND | 2016-07-16 00:00:00+02
+ 1262 | 404 NOT FOUND | 2016-07-17 00:00:00+02
+  384 | 404 NOT FOUND | 2016-07-18 00:00:00+02
+  421 | 404 NOT FOUND | 2016-07-19 00:00:00+02
+  389 | 404 NOT FOUND | 2016-07-20 00:00:00+02
+  415 | 404 NOT FOUND | 2016-07-21 00:00:00+02
+  400 | 404 NOT FOUND | 2016-07-22 00:00:00+02
+  386 | 404 NOT FOUND | 2016-07-23 00:00:00+02
+  414 | 404 NOT FOUND | 2016-07-24 00:00:00+02
+  405 | 404 NOT FOUND | 2016-07-25 00:00:00+02
+  390 | 404 NOT FOUND | 2016-07-26 00:00:00+02
+  381 | 404 NOT FOUND | 2016-07-27 00:00:00+02
+  383 | 404 NOT FOUND | 2016-07-28 00:00:00+02
+  382 | 404 NOT FOUND | 2016-07-29 00:00:00+02
+  397 | 404 NOT FOUND | 2016-07-30 00:00:00+02
+  363 | 404 NOT FOUND | 2016-07-31 00:00:00+02
+(31 rows)
+
+
+From the two views above one can easily calculate the proportion of the two in a subquery
+then select the one(s) that are above 1%.
+```
+SELECT subq."day-month-year", subq.error_ratio_pct FROM(
+SELECT concat(extract(day from error_404.day),'-', extract(month from error_404.day),'-', extract(year from error_404.day)) AS "day-month-year",
+ROUND(CAST(error_404.sum AS numeric)/CAST(ok_200.sum AS numeric)*100, 1) AS error_ratio_pct
+FROM error_404 JOIN ok_200 ON
+error_404.day = ok_200.day
+ORDER BY error_ratio_pct DESC) AS subq
+WHERE subq.error_ratio_pct > 1.0
+;
+```
+
+output:
+
+ day-month-year | error_ratio_pct 
+----------------+-----------------
+ 17-7-2016      |             2.3
+

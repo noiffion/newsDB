@@ -1,0 +1,17 @@
+CREATE OR REPLACE VIEW hit_per_page AS
+SELECT COUNT(id) AS pageview,
+CASE
+WHEN path LIKE '/article/bad-things-gon%' THEN 'bad-things-gone'
+WHEN path LIKE '/article/balloon-goons-doome%' THEN 'balloon-goons-doomed'
+WHEN path LIKE '/article/bears-love-berrie%' THEN 'bears-love-berries'
+WHEN path LIKE '/article/candidate-is-jer%' THEN 'candidate-is-jerk'
+WHEN path LIKE '/article/goats-eat-google%' THEN 'goats-eat-googles'
+WHEN path LIKE '/article/media-obsessed-with-bear%' THEN 'media-obsessed-with-bears'
+WHEN path LIKE '/article/trouble-for-trouble%' THEN 'trouble-for-troubled'
+WHEN path LIKE '/article/so-many-bear%' THEN 'so-many-bears'
+ELSE 'Not article'
+END AS slug
+FROM log
+GROUP BY slug
+ORDER BY pageview DESC;
+

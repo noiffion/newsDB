@@ -1,0 +1,12 @@
+-- 3. On which days did more than 1% of requests lead to errors?
+
+SELECT subq."day-month-year", subq.error_ratio_pct
+FROM(
+SELECT concat(extract(day from error_404.day),'-', extract(month from error_404.day),'-',
+extract(year from error_404.day)) AS "day-month-year",
+ROUND(CAST(error_404.sum AS numeric)/CAST(ok_200.sum AS numeric)*100, 1) AS error_ratio_pct
+FROM error_404 JOIN ok_200 ON
+error_404.day = ok_200.day
+ORDER BY error_ratio_pct DESC) AS subq
+WHERE subq.error_ratio_pct > 1.0;
+

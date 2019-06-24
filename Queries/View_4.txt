@@ -1,0 +1,7 @@
+CREATE OR REPLACE VIEW error_404 AS
+SELECT COUNT(id) AS sum, status, date_trunc('day', time) AS day
+FROM log
+WHERE status LIKE '%404%'
+GROUP BY day, status
+ORDER BY day;
+
